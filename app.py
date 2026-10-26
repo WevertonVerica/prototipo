@@ -14,12 +14,12 @@ st.set_page_config(
     layout="centered"
 )
 
-ARQUIVO = "imoveis.csv"
+ARQUIVO = "prototipo.csv"
 
-COLUNA_CODIGO = "bcicodigo"
-COLUNA_PISO = "NOME_REAL_DA_COLUNA_PISO"
-COLUNA_FORRO = "NOME_REAL_DA_COLUNA_FORRO"
-COLUNA_ESTADO = "NOME_REAL_DA_COLUNA_ESTADO"
+COLUNA_CODIGO = "BCICADASTRO"
+COLUNA_PISO = "zoneamento"
+COLUNA_FORRO = "ocupacao"
+COLUNA_ESTADO = "utilizacao"
 COLUNA_VALOR = "valor predito"
 
 # ==========================================
