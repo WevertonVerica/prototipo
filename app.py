@@ -1,60 +1,81 @@
+
 import streamlit as st
 import pandas as pd
-from pathlib import Path
 import plotly.graph_objects as go
+from pathlib import Path
+
+# ==========================================
+# 1. CONFIGURAÇÕES
+# ==========================================
 
 st.set_page_config(
-    page_title="Consulta de Imóveis",
+    page_title="Consulta de Cadastro Imobiliário",
     page_icon="🏠",
     layout="centered"
 )
 
-# -------- CONFIGURAÇÃO --------
+ARQUIVO = "imoveis.csv"
 
-ARQUIVO = "prototipo.xlsx"
+COLUNA_CODIGO = "bcicodigo"
+COLUNA_PISO = "NOME_REAL_DA_COLUNA_PISO"
+COLUNA_FORRO = "NOME_REAL_DA_COLUNA_FORRO"
+COLUNA_ESTADO = "NOME_REAL_DA_COLUNA_ESTADO"
+COLUNA_VALOR = "valor predito"
 
-COLUNA_CODIGO = "BCICADASTRO"
-COLUNA_PISO = "ocupacao"
-COLUNA_FORRO = "utilizacao"
-COLUNA_ESTADO = "zoneamento"
-
-# -------- LEITURA DOS DADOS --------
+# ==========================================
+# 2. CARREGAMENTO DOS DADOS
+# ==========================================
 
 @st.cache_data
 def carregar_dados(arquivo):
     caminho = Path(arquivo)
 
     if caminho.suffix.lower() == ".csv":
-        return pd.read_csv(
+        dados = pd.read_csv(
             caminho,
-            dtype={COLUNA_CODIGO: str},
             sep=None,
             engine="python"
         )
-
     elif caminho.suffix.lower() in [".xlsx", ".xls"]:
-        return pd.read_excel(
-            caminho,
-            dtype={COLUNA_CODIGO: str}
-        )
-
+        dados = pd.read_excel(caminho)
     else:
         raise ValueError("Formato de arquivo não suportado.")
 
-st.title("Consulta de Cadastro Imobiliário")
-st.write("Digite o código do imóvel para consultar suas características.")
+    # Remove espaços extras dos nomes das colunas
+    dados.columns = dados.columns.str.strip()
+
+    # Padroniza o código para comparação numérica
+    dados[COLUNA_CODIGO] = pd.to_numeric(
+        dados[COLUNA_CODIGO],
+        errors="coerce"
+    )
+
+    return dados
+
+
+# ==========================================
+# 3. TÍTULO DA APLICAÇÃO
+# ==========================================
+
+st.title("🏠 Consulta de Cadastro Imobiliário")
+st.write(
+    "Digite o código do imóvel para consultar "
+    "suas características e o valor predito."
+)
+
+# ==========================================
+# 4. CONSULTA DO IMÓVEL
+# ==========================================
 
 try:
     dados = carregar_dados(ARQUIVO)
-
-    # Remove espaços extras dos nomes das colunas
-    dados.columns = dados.columns.str.strip()
 
     colunas_necessarias = [
         COLUNA_CODIGO,
         COLUNA_PISO,
         COLUNA_FORRO,
-        COLUNA_ESTADO
+        COLUNA_ESTADO,
+        COLUNA_VALOR
     ]
 
     faltantes = [
@@ -64,53 +85,269 @@ try:
 
     if faltantes:
         st.error(
-            f"Colunas não encontradas: {', '.join(faltantes)}"
+            "Não encontrei estas colunas no arquivo: "
+            + ", ".join(faltantes)
         )
-        st.write("Colunas disponíveis:", dados.columns.tolist())
+
+        st.write(
+            "Colunas disponíveis:",
+            dados.columns.tolist()
+        )
 
     else:
-        with st.form("consulta"):
-            codigo = st.text_input(
+        with st.form("consulta_imovel"):
+            codigo_digitado = st.text_input(
                 "Código do imóvel (bcicodigo)",
-                placeholder="Ex.: 1000"
-            ).strip()
+                placeholder="Ex.: 9999999"
+            )
 
             consultar = st.form_submit_button("Consultar")
 
         if consultar:
-            if not codigo.strip():
+            codigo_digitado = codigo_digitado.strip()
+
+            if not codigo_digitado:
                 st.warning("Digite o código do imóvel.")
+
+            elif not codigo_digitado.isdigit():
+                st.warning(
+                    "Digite um código numérico inteiro válido."
+                )
+
             else:
-                codigo = int(codigo.strip())
-        
+                codigo = int(codigo_digitado)
+
                 resultado = dados[
                     dados[COLUNA_CODIGO] == codigo
                 ]
-        
+
                 if resultado.empty:
-                    st.error("Nenhum imóvel encontrado com esse código.")
+                    st.error("Imóvel não encontrado.")
+
                 else:
                     imovel = resultado.iloc[0]
-                    st.success("Imóvel encontrado!")
 
-                    c1, c2, c3 = st.columns(3)
-
-                    c1.metric("Piso", "—" if pd.isna(imovel[COLUNA_PISO]) else str(imovel[COLUNA_PISO]))
-                    c2.metric("Forro", "—" if pd.isna(imovel[COLUNA_FORRO]) else str(imovel[COLUNA_FORRO]))
-                    c3.metric("Conservação", "—" if pd.isna(imovel[COLUNA_ESTADO]) else str(imovel[COLUNA_ESTADO]))
-                    
                     if len(resultado) > 1:
                         st.warning(
-                            f"Foram encontrados {len(resultado)} registros "
-                            "com esse código. Exibindo o primeiro."
+                            "Existem vários registros com esse código. "
+                            "Será exibido o primeiro."
                         )
-                    # Gráfico do valor predito com intervalo de ±30%
 
+                    st.success(
+                        f"Imóvel {codigo} encontrado!"
+                    )
 
+                    # ==========================================
+                    # 5. CARACTERÍSTICAS DO IMÓVEL
+                    # ==========================================
 
+                    st.subheader("Características do imóvel")
+
+                    def mostrar_valor(valor):
+                        if pd.isna(valor):
+                            return "Não informado"
+                        return str(valor)
+
+                    col1, col2, col3 = st.columns(3)
+
+                    col1.metric(
+                        "Piso",
+                        mostrar_valor(imovel[COLUNA_PISO])
+                    )
+
+                    col2.metric(
+                        "Forro",
+                        mostrar_valor(imovel[COLUNA_FORRO])
+                    )
+
+                    col3.metric(
+                        "Estado de conservação",
+                        mostrar_valor(imovel[COLUNA_ESTADO])
+                    )
+
+                    # ==========================================
+                    # 6. GRÁFICO DO VALOR PREDITO
+                    # ==========================================
+
+                    st.subheader("Valor predito do imóvel")
+
+                    valor = pd.to_numeric(
+                        pd.Series([imovel[COLUNA_VALOR]]),
+                        errors="coerce"
+                    ).iloc[0]
+
+                    if pd.isna(valor):
+                        st.warning(
+                            "O valor predito não está informado "
+                            "ou não é numérico."
+                        )
+
+                    elif valor < 0:
+                        st.warning(
+                            "O valor predito é negativo. "
+                            "Verifique o dado antes de gerar o gráfico."
+                        )
+
+                    else:
+                        limite_inferior = valor * 0.70
+                        limite_superior = valor * 1.30
+
+                        def moeda_br(valor):
+                            texto = f"{valor:,.2f}"
+                            texto = texto.replace(",", "X")
+                            texto = texto.replace(".", ",")
+                            texto = texto.replace("X", ".")
+                            return f"R$ {texto}"
+
+                        st.metric(
+                            "Valor predito",
+                            moeda_br(valor)
+                        )
+
+                        st.caption(
+                            "Faixa ilustrativa de ±30% "
+                            "em torno do valor predito."
+                        )
+
+                        # Barra horizontal do intervalo
+                        fig = go.Figure()
+
+                        fig.add_trace(
+                            go.Bar(
+                                x=[
+                                    limite_superior
+                                    - limite_inferior
+                                ],
+                                base=[limite_inferior],
+                                y=["Faixa de valores"],
+                                orientation="h",
+                                marker_color="#BFD7ED",
+                                width=0.35,
+                                hovertemplate=(
+                                    "Intervalo: %{base:,.2f} "
+                                    "a %{customdata:,.2f}"
+                                    "<extra></extra>"
+                                ),
+                                customdata=[limite_superior],
+                                showlegend=False
+                            )
+                        )
+
+                        # Marca o valor predito
+                        fig.add_trace(
+                            go.Scatter(
+                                x=[valor],
+                                y=["Faixa de valores"],
+                                mode="markers",
+                                marker=dict(
+                                    color="#145DA0",
+                                    size=14,
+                                    symbol="diamond"
+                                ),
+                                name="Valor predito",
+                                hovertemplate=(
+                                    "Predito: %{x:,.2f}"
+                                    "<extra></extra>"
+                                )
+                            )
+                        )
+
+                        # Marca os limites do intervalo
+                        fig.add_trace(
+                            go.Scatter(
+                                x=[
+                                    limite_inferior,
+                                    limite_superior
+                                ],
+                                y=[
+                                    "Faixa de valores",
+                                    "Faixa de valores"
+                                ],
+                                mode="markers",
+                                marker=dict(
+                                    color="#D9534F",
+                                    size=10,
+                                    symbol="line-ns-open"
+                                ),
+                                name="Limites ±30%",
+                                hovertemplate=(
+                                    "%{x:,.2f}<extra></extra>"
+                                )
+                            )
+                        )
+
+                        # Anotações dos valores
+                        fig.add_annotation(
+                            x=limite_inferior,
+                            y="Faixa de valores",
+                            text=f"-30%<br>{moeda_br(limite_inferior)}",
+                            showarrow=False,
+                            yshift=-35,
+                            font=dict(color="#D9534F")
+                        )
+
+                        fig.add_annotation(
+                            x=valor,
+                            y="Faixa de valores",
+                            text=f"Predito<br>{moeda_br(valor)}",
+                            showarrow=False,
+                            yshift=35,
+                            font=dict(color="#145DA0")
+                        )
+
+                        fig.add_annotation(
+                            x=limite_superior,
+                            y="Faixa de valores",
+                            text=f"+30%<br>{moeda_br(limite_superior)}",
+                            showarrow=False,
+                            yshift=-35,
+                            font=dict(color="#D9534F")
+                        )
+
+                        # Ajustes visuais
+                        amplitude = (
+                            limite_superior - limite_inferior
+                        )
+
+                        margem = amplitude * 0.20
+
+                        fig.update_layout(
+                            height=260,
+                            margin=dict(
+                                l=20,
+                                r=20,
+                                t=60,
+                                b=30
+                            ),
+                            xaxis=dict(
+                                title="Valor do imóvel (R$)",
+                                range=[
+                                    max(0, limite_inferior - margem),
+                                    limite_superior + margem
+                                ],
+                                tickformat=",.0f",
+                                separatethousands=True
+                            ),
+                            yaxis=dict(
+                                visible=False
+                            ),
+                            showlegend=False,
+                            plot_bgcolor="white",
+                            paper_bgcolor="white"
+                        )
+
+                        st.plotly_chart(
+                            fig,
+                            use_container_width=True
+                        )
 
 except FileNotFoundError:
-    st.error(f"Arquivo não encontrado: {ARQUIVO}")
+    st.error(
+        f"Arquivo '{ARQUIVO}' não encontrado. "
+        "Verifique se ele está no repositório."
+    )
 
 except Exception as erro:
-    st.error(f"Erro ao carregar ou consultar os dados: {erro}")
+    st.error(
+        f"Erro ao carregar ou consultar os dados: {erro}"
+    )
