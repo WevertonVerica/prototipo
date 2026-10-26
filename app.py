@@ -77,20 +77,19 @@ try:
             consultar = st.form_submit_button("Consultar")
 
         if consultar:
-            if not codigo:
+            if not codigo.strip():
                 st.warning("Digite o código do imóvel.")
-
             else:
+                codigo = int(codigo.strip())
+        
                 resultado = dados[
-                    dados[COLUNA_CODIGO].str.strip() == codigo
+                    dados[COLUNA_CODIGO] == codigo
                 ]
-
+        
                 if resultado.empty:
                     st.error("Nenhum imóvel encontrado com esse código.")
-
                 else:
                     imovel = resultado.iloc[0]
-
                     st.success("Imóvel encontrado!")
 
                     c1, c2, c3 = st.columns(3)
