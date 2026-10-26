@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -208,12 +207,228 @@ try:
             st.success(f"Imóvel {codigo} encontrado!")
 
             # ==========================================
-            # 8. CARACTERÍSTICAS CADASTRAIS
+            # 8. ORGANIZAÇÃO DO RESULTADO EM DUAS COLUNAS
             # ==========================================
 
+            # Coluna esquerda: valor e gráfico.
+            # Coluna direita: mapa.
+            coluna_esquerda, coluna_mapa = st.columns(
+                [4, 6],
+                gap="medium"
+            )
+
+            with coluna_esquerda:
+                # Valor predito
+                st.subheader("Valor predito do imóvel")
+
+                valor = pd.to_numeric(
+                    pd.Series([imovel[COLUNA_VALOR]]),
+                    errors="coerce"
+                ).iloc[0]
+
+                if pd.isna(valor):
+                    st.warning(
+                        "O valor predito não está informado "
+                        "ou não é numérico."
+                    )
+
+                elif valor < 0:
+                    st.warning(
+                        "O valor predito é negativo. "
+                        "Verifique o dado antes de exibir o gráfico."
+                    )
+
+                else:
+                    inferior = valor * 0.70
+                    superior = valor * 1.30
+
+                    st.metric(
+                        "Valor predito",
+                        moeda_br(valor)
+                    )
+
+                    st.caption(
+                        "A faixa de ±30% é ilustrativa e "
+                        "não representa um intervalo de confiança."
+                    )
+
+                    fig = go.Figure()
+
+                    fig.add_trace(
+                        go.Bar(
+                            x=[superior - inferior],
+                            base=[inferior],
+                            y=["Faixa de valores"],
+                            orientation="h",
+                            width=0.30,
+                            marker_color="#BFD7ED",
+                            name="Intervalo de ±30%",
+                            hovertemplate=(
+                                "Faixa: "
+                                + moeda_br(inferior)
+                                + " a "
+                                + moeda_br(superior)
+                                + "<extra></extra>"
+                            )
+                        )
+                    )
+
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[valor],
+                            y=["Faixa de valores"],
+                            mode="markers",
+                            marker=dict(
+                                color="#145DA0",
+                                size=12,
+                                symbol="diamond"
+                            ),
+                            name="Valor predito",
+                            hovertemplate=(
+                                "Valor predito: R$ %{x:,.2f}"
+                                "<extra></extra>"
+                            )
+                        )
+                    )
+
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[inferior, superior],
+                            y=[
+                                "Faixa de valores",
+                                "Faixa de valores"
+                            ],
+                            mode="markers",
+                            marker=dict(
+                                color="#D9534F",
+                                size=10,
+                                symbol="line-ns-open"
+                            ),
+                            name="Limites"
+                        )
+                    )
+
+                    fig.add_annotation(
+                        x=inferior,
+                        y="Faixa de valores",
+                        text=f"-30%<br>{moeda_br(inferior)}",
+                        showarrow=False,
+                        yshift=-30,
+                        font=dict(size=10)
+                    )
+
+                    fig.add_annotation(
+                        x=valor,
+                        y="Faixa de valores",
+                        text=f"Predito<br>{moeda_br(valor)}",
+                        showarrow=False,
+                        yshift=30,
+                        font=dict(size=10)
+                    )
+
+                    fig.add_annotation(
+                        x=superior,
+                        y="Faixa de valores",
+                        text=f"+30%<br>{moeda_br(superior)}",
+                        showarrow=False,
+                        yshift=-30,
+                        font=dict(size=10)
+                    )
+
+                    amplitude = superior - inferior
+                    margem = amplitude * 0.20
+
+                    fig.update_layout(
+                        height=250,
+                        margin=dict(l=8, r=8, t=55, b=30),
+                        xaxis=dict(
+                            title="Valor do imóvel (R$)",
+                            range=[
+                                max(0, inferior - margem),
+                                superior + margem
+                            ],
+                            tickformat=",.0f",
+                            tickfont=dict(size=9)
+                        ),
+                        yaxis=dict(visible=False),
+                        showlegend=False
+                    )
+
+                    st.plotly_chart(
+                        fig,
+                        use_container_width=True,
+                        config={"displayModeBar": False}
+                    )
+
+            with coluna_mapa:
+                st.subheader("Localização do imóvel")
+
+                latitude = pd.to_numeric(
+                    pd.Series([imovel[COLUNA_LATITUDE]]),
+                    errors="coerce"
+                ).iloc[0]
+
+                longitude = pd.to_numeric(
+                    pd.Series([imovel[COLUNA_LONGITUDE]]),
+                    errors="coerce"
+                ).iloc[0]
+
+                if pd.isna(latitude) or pd.isna(longitude):
+                    st.warning(
+                        "Este imóvel não possui coordenadas válidas."
+                    )
+
+                elif not (
+                    -90 <= latitude <= 90
+                    and -180 <= longitude <= 180
+                ):
+                    st.warning(
+                        "As coordenadas deste imóvel são inválidas."
+                    )
+
+                else:
+                    mapa = folium.Map(
+                        location=[latitude, longitude],
+                        zoom_start=18,
+                        tiles="OpenStreetMap"
+                    )
+
+                    folium.Marker(
+                        location=[latitude, longitude],
+                        tooltip=f"Imóvel {codigo}",
+                        popup=f"Cadastro: {codigo}",
+                        icon=folium.Icon(
+                            color="red",
+                            icon="home"
+                        )
+                    ).add_to(mapa)
+
+                    st_folium(
+                        mapa,
+                        use_container_width=True,
+                        height=570,
+                        key=f"mapa_{codigo}",
+                        returned_objects=[]
+                    )
+
+                    link_google = (
+                        "https://www.google.com/maps/search/?api=1"
+                        f"&query={latitude},{longitude}"
+                    )
+
+                    st.link_button(
+                        "Abrir no Google Maps",
+                        link_google
+                    )
+
+            # ==========================================
+            # 9. CARACTERÍSTICAS CADASTRAIS ABAIXO
+            # ==========================================
+
+            st.divider()
             st.subheader("Características do imóvel")
 
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3 = st.columns(3, gap="large")
 
             col1.metric(
                 "Zoneamento",
@@ -229,222 +444,6 @@ try:
                 "Utilização",
                 mostrar_valor(imovel[COLUNA_ESTADO])
             )
-
-            # ==========================================
-            # 9. VALOR PREDITO E INTERVALO DE ±30%
-            # ==========================================
-
-            st.subheader("Valor predito do imóvel")
-
-            valor = pd.to_numeric(
-                pd.Series([imovel[COLUNA_VALOR]]),
-                errors="coerce"
-            ).iloc[0]
-
-            if pd.isna(valor):
-                st.warning(
-                    "O valor predito não está informado "
-                    "ou não é numérico."
-                )
-
-            elif valor < 0:
-                st.warning(
-                    "O valor predito é negativo. "
-                    "Verifique o dado antes de exibir o gráfico."
-                )
-
-            else:
-                inferior = valor * 0.70
-                superior = valor * 1.30
-
-                st.metric(
-                    "Valor predito",
-                    moeda_br(valor)
-                )
-
-                st.caption(
-                    "A faixa de ±30% é ilustrativa e "
-                    "não representa um intervalo de confiança."
-                )
-
-                fig = go.Figure()
-
-                # Barra horizontal do limite inferior
-                # até o limite superior
-                fig.add_trace(
-                    go.Bar(
-                        x=[superior - inferior],
-                        base=[inferior],
-                        y=["Faixa de valores"],
-                        orientation="h",
-                        width=0.30,
-                        marker_color="#BFD7ED",
-                        name="Intervalo de ±30%",
-                        hovertemplate=(
-                            "Faixa: "
-                            + moeda_br(inferior)
-                            + " a "
-                            + moeda_br(superior)
-                            + "<extra></extra>"
-                        )
-                    )
-                )
-
-                # Marca o valor predito
-                fig.add_trace(
-                    go.Scatter(
-                        x=[valor],
-                        y=["Faixa de valores"],
-                        mode="markers",
-                        marker=dict(
-                            color="#145DA0",
-                            size=14,
-                            symbol="diamond"
-                        ),
-                        name="Valor predito",
-                        hovertemplate=(
-                            "Valor predito: R$ %{x:,.2f}"
-                            "<extra></extra>"
-                        )
-                    )
-                )
-
-                # Marcas dos limites
-                fig.add_trace(
-                    go.Scatter(
-                        x=[inferior, superior],
-                        y=[
-                            "Faixa de valores",
-                            "Faixa de valores"
-                        ],
-                        mode="markers",
-                        marker=dict(
-                            color="#D9534F",
-                            size=12,
-                            symbol="line-ns-open"
-                        ),
-                        name="Limites"
-                    )
-                )
-
-                # Anotações dos três valores
-                fig.add_annotation(
-                    x=inferior,
-                    y="Faixa de valores",
-                    text=f"-30%<br>{moeda_br(inferior)}",
-                    showarrow=False,
-                    yshift=-35
-                )
-
-                fig.add_annotation(
-                    x=valor,
-                    y="Faixa de valores",
-                    text=f"Predito<br>{moeda_br(valor)}",
-                    showarrow=False,
-                    yshift=35
-                )
-
-                fig.add_annotation(
-                    x=superior,
-                    y="Faixa de valores",
-                    text=f"+30%<br>{moeda_br(superior)}",
-                    showarrow=False,
-                    yshift=-35
-                )
-
-                amplitude = superior - inferior
-                margem = amplitude * 0.20
-
-                fig.update_layout(
-                    height=260,
-                    margin=dict(
-                        l=20,
-                        r=20,
-                        t=70,
-                        b=35
-                    ),
-                    xaxis=dict(
-                        title="Valor do imóvel (R$)",
-                        range=[
-                            max(0, inferior - margem),
-                            superior + margem
-                        ],
-                        tickformat=",.0f"
-                    ),
-                    yaxis=dict(visible=False),
-                    showlegend=False
-                )
-
-                st.plotly_chart(
-                    fig,
-                    use_container_width=True
-                )
-
-            # ==========================================
-            # 10. MAPA DO IMÓVEL
-            # ==========================================
-
-            st.subheader("Localização do imóvel")
-
-            latitude = pd.to_numeric(
-                pd.Series([imovel[COLUNA_LATITUDE]]),
-                errors="coerce"
-            ).iloc[0]
-
-            longitude = pd.to_numeric(
-                pd.Series([imovel[COLUNA_LONGITUDE]]),
-                errors="coerce"
-            ).iloc[0]
-
-            if pd.isna(latitude) or pd.isna(longitude):
-                st.warning(
-                    "Este imóvel não possui coordenadas válidas."
-                )
-
-            elif not (
-                -90 <= latitude <= 90
-                and -180 <= longitude <= 180
-            ):
-                st.warning(
-                    "As coordenadas deste imóvel são inválidas."
-                )
-
-            else:
-                mapa = folium.Map(
-                    location=[latitude, longitude],
-                    zoom_start=18,
-                    tiles="OpenStreetMap"
-                )
-
-                folium.Marker(
-                    location=[latitude, longitude],
-                    tooltip=f"Imóvel {codigo}",
-                    popup=f"Cadastro: {codigo}",
-                    icon=folium.Icon(
-                        color="red",
-                        icon="home"
-                    )
-                ).add_to(mapa)
-
-                # O resultado da consulta fica salvo no
-                # session_state, mesmo após interagir com o mapa.
-                st_folium(
-                    mapa,
-                    use_container_width=True,
-                    height=450,
-                    key=f"mapa_{codigo}",
-                    returned_objects=[]
-                )
-
-                link_google = (
-                    "https://www.google.com/maps/search/?api=1"
-                    f"&query={latitude},{longitude}"
-                )
-
-                st.link_button(
-                    "Abrir no Google Maps",
-                    link_google
-                )
 
 except FileNotFoundError as erro:
     st.error(str(erro))
