@@ -14,7 +14,7 @@ st.set_page_config(
     layout="centered"
 )
 
-ARQUIVO = "prototipo.csv"
+ARQUIVO = "prototipo.xlsx"
 
 COLUNA_CODIGO = "BCICADASTRO"
 COLUNA_PISO = "zoneamento"
