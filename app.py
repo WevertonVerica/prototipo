@@ -12,7 +12,7 @@ st.set_page_config(
 
 ARQUIVO = "prototipo.xlsx"
 
-COLUNA_CODIGO = "bcicodigo"
+COLUNA_CODIGO = "BCICADASTRO"
 COLUNA_PISO = "ocupacao"
 COLUNA_FORRO = "utilizacao"
 COLUNA_ESTADO = "zoneamento"
