@@ -3,6 +3,8 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from pathlib import Path
+import folium
+from streamlit_folium import st_folium
 
 # ==========================================
 # 1. CONFIGURAÇÕES
@@ -21,6 +23,8 @@ COLUNA_PISO = "zoneamento"
 COLUNA_FORRO = "ocupacao"
 COLUNA_ESTADO = "utilizacao"
 COLUNA_VALOR = "valor predito"
+COLUNA_LATITUDE = "latitude"
+COLUNA_LONGITUDE = "longitude"
 
 # ==========================================
 # 2. CARREGAMENTO DOS DADOS
@@ -177,6 +181,53 @@ try:
                         mostrar_valor(imovel[COLUNA_ESTADO])
                     )
 
+
+                    # ==========================================
+                    # MAPA DO IMÓVEL
+                    # ==========================================
+                    
+                    st.subheader("Localização do imóvel")
+                    
+                    latitude = pd.to_numeric(
+                        pd.Series([imovel[COLUNA_LATITUDE]]),
+                        errors="coerce"
+                    ).iloc[0]
+                    
+                    longitude = pd.to_numeric(
+                        pd.Series([imovel[COLUNA_LONGITUDE]]),
+                        errors="coerce"
+                    ).iloc[0]
+                    
+                    if pd.isna(latitude) or pd.isna(longitude):
+                        st.warning("Este imóvel não possui coordenadas válidas.")
+                    
+                    elif not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+                        st.warning("As coordenadas deste imóvel são inválidas.")
+                    
+                    else:
+                        mapa = folium.Map(
+                            location=[latitude, longitude],
+                            zoom_start=18,
+                            tiles="OpenStreetMap"
+                        )
+                    
+                        folium.Marker(
+                            location=[latitude, longitude],
+                            tooltip=f"Imóvel {codigo}",
+                            popup=f"Cadastro: {codigo}",
+                            icon=folium.Icon(
+                                color="red",
+                                icon="home"
+                            )
+                        ).add_to(mapa)
+                    
+                        st_folium(
+                            mapa,
+                            use_container_width=True,
+                            height=450,
+                            key=f"mapa_{codigo}"
+                        )
+                    
                     # ==========================================
                     # 6. GRÁFICO DO VALOR PREDITO
                     # ==========================================
