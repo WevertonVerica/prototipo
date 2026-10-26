@@ -98,7 +98,12 @@ try:
                     c1.metric("Piso", "—" if pd.isna(imovel[COLUNA_PISO]) else str(imovel[COLUNA_PISO]))
                     c2.metric("Forro", "—" if pd.isna(imovel[COLUNA_FORRO]) else str(imovel[COLUNA_FORRO]))
                     c3.metric("Conservação", "—" if pd.isna(imovel[COLUNA_ESTADO]) else str(imovel[COLUNA_ESTADO]))
-
+                    
+                    if len(resultado) > 1:
+                        st.warning(
+                            f"Foram encontrados {len(resultado)} registros "
+                            "com esse código. Exibindo o primeiro."
+                        )
                     # Gráfico do valor predito com intervalo de ±30%
 
                     valor = float(imovel["valor predito"])
@@ -161,11 +166,7 @@ try:
                     
                     st.plotly_chart(fig, use_container_width=True)
 
-                    if len(resultado) > 1:
-                        st.warning(
-                            f"Foram encontrados {len(resultado)} registros "
-                            "com esse código. Exibindo o primeiro."
-                        )
+
 
 except FileNotFoundError:
     st.error(f"Arquivo não encontrado: {ARQUIVO}")
