@@ -29,29 +29,41 @@ COLUNA_VALOR = "valor predito"
 @st.cache_data
 def carregar_dados(arquivo):
     caminho = Path(arquivo)
+    extensao = caminho.suffix.lower()
 
-    if caminho.suffix.lower() == ".csv":
+    if extensao == ".csv":
         dados = pd.read_csv(
             caminho,
             sep=None,
             engine="python"
         )
-    elif caminho.suffix.lower() in [".xlsx", ".xls"]:
-        dados = pd.read_excel(caminho)
-    else:
-        raise ValueError("Formato de arquivo não suportado.")
 
-    # Remove espaços extras dos nomes das colunas
+    elif extensao == ".xlsx":
+        dados = pd.read_excel(
+            caminho,
+            engine="openpyxl"
+        )
+
+    elif extensao == ".xls":
+        dados = pd.read_excel(
+            caminho,
+            engine="xlrd"
+        )
+
+    else:
+        raise ValueError(
+            f"Extensão não suportada: {extensao}. "
+            "Use CSV, XLSX ou XLS."
+        )
+
     dados.columns = dados.columns.str.strip()
 
-    # Padroniza o código para comparação numérica
     dados[COLUNA_CODIGO] = pd.to_numeric(
         dados[COLUNA_CODIGO],
         errors="coerce"
     )
 
     return dados
-
 
 # ==========================================
 # 3. TÍTULO DA APLICAÇÃO
