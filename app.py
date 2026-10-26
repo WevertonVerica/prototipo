@@ -106,65 +106,6 @@ try:
                         )
                     # Gráfico do valor predito com intervalo de ±30%
 
-                    valor = float(imovel["valor predito"])
-                    
-                    limite_inferior = valor * 0.70
-                    limite_superior = valor * 1.30
-                    
-                    st.subheader("Valor predito do imóvel")
-                    
-                    fig = go.Figure()
-                    
-                    # Barra horizontal representando o intervalo
-                    fig.add_trace(go.Bar(
-                        x=[limite_superior - limite_inferior],
-                        base=[limite_inferior],
-                        y=["Valor do imóvel"],
-                        orientation="h",
-                        marker=dict(color="#BFD7ED"),
-                        hovertemplate="Intervalo: R$ %{x:,.2f}<extra></extra>",
-                        showlegend=False
-                    ))
-                    
-                    # Marca o valor predito no centro do intervalo
-                    fig.add_vline(
-                        x=valor,
-                        line_color="#145DA0",
-                        line_width=4,
-                        annotation_text=f"Predito: R$ {valor:,.2f}",
-                        annotation_position="top"
-                    )
-                    
-                    # Marca os limites inferior e superior
-                    fig.add_vline(
-                        x=limite_inferior,
-                        line_color="#D9534F",
-                        line_dash="dash",
-                        annotation_text=f"-30%: R$ {limite_inferior:,.2f}",
-                        annotation_position="bottom"
-                    )
-                    
-                    fig.add_vline(
-                        x=limite_superior,
-                        line_color="#D9534F",
-                        line_dash="dash",
-                        annotation_text=f"+30%: R$ {limite_superior:,.2f}",
-                        annotation_position="bottom"
-                    )
-                    
-                    fig.update_layout(
-                        xaxis_title="Valor (R$)",
-                        yaxis=dict(visible=False),
-                        xaxis=dict(
-                            range=[limite_inferior * 0.85, limite_superior * 1.15],
-                            tickprefix="R$ ",
-                            tickformat=",.2f"
-                        ),
-                        height=220,
-                        margin=dict(l=20, r=20, t=90, b=50)
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
 
 
 
